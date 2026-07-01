@@ -1,0 +1,10 @@
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Editor / IDE settings
+.vscode/
+
+# Generated result files (produced by running the notebook)
+DC_OPF_results_*.xlsx
+Disconnected_elements_from_DC_OPF_results.xlsx
