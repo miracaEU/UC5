@@ -8,6 +8,9 @@
 
 import os
 import matplotlib.pyplot as plt
+from matplotlib.colors import Normalize
+from matplotlib.collections import LineCollection
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import pandas as pd
 import geopandas as gpd
 import pickle
@@ -346,7 +349,188 @@ def plot_historical_affected_regions(sava_lines, countries, rivers, show_plot=Fa
     plt.tight_layout()
     if show_plot == True:
         plt.show()
-    
+
     plt.close()
 
     return affected_polygons
+
+
+def plot_power_flow_static(
+    net,
+    title="Power Flow Simulation Results",
+    v_min=0.9,
+    v_max=1.1,
+    load_min=0,
+    load_max=100,
+    cmap="jet",
+):
+    """
+    Static (matplotlib) map of the current power-flow state.
+
+    Buses are coloured by their per-unit voltage (``net.res_bus.vm_pu``) and
+    active lines by their loading (``net.res_line.loading_percent``), both on a
+    blue->red colour map; buses and lines that are out of service
+    (disconnected) are drawn in black. The Slovenian country outline is
+    included for context, mirroring the "affected regions and infrastructure"
+    plots. Two colour bars are shown, matching the interactive
+    ``pf_res_plotly`` figure (bus voltage and line loading).
+
+    Unlike ``pf_res_plotly`` (an interactive Plotly figure that only renders in
+    front-ends with plotly.js, e.g. VS Code / JupyterLab), this produces a
+    static PNG, so the result also shows up on GitHub and in the Jupyter Book
+    without any extra configuration.
+
+    Parameters
+    ----------
+    net : pandapowerNet
+        Network with populated ``res_bus`` / ``res_line`` (run a power flow /
+        OPF first) and geodata (call ``fix_geodata`` beforehand).
+    title : str
+        Plot title.
+    v_min, v_max : float
+        Voltage bounds (p.u.) for the bus colour scale. Default 0.9-1.1,
+        matching the interactive ``pf_res_plotly`` colour bar.
+    load_min, load_max : float
+        Line-loading bounds (%) for the line colour scale. Default 0-100.
+    cmap : str
+        Matplotlib colormap (default "jet": blue = low, red = high).
+    """
+    # --- Country outline (same source as the other UC5 map plots) -----------
+    country = pd.read_pickle(f"{current_folder}//pickle_files//country.pkl")
+
+    # --- Bus voltages and disconnection status ------------------------------
+    if not net.res_bus.empty and "vm_pu" in net.res_bus.columns:
+        vm_pu = net.res_bus["vm_pu"].reindex(net.bus.index)
+    else:
+        vm_pu = pd.Series(index=net.bus.index, dtype=float)
+
+    has_results = vm_pu.notna().any()
+
+    # A bus is "disconnected" if it is out of service. When power-flow results
+    # exist, buses left without a solved voltage (NaN) are treated the same way.
+    bus_disconnected = ~net.bus["in_service"].astype(bool)
+    if has_results:
+        bus_disconnected = bus_disconnected | vm_pu.isna()
+    else:
+        print(
+            "[plot_power_flow_static] No res_bus voltages found - "
+            "showing network topology only (run a power flow / OPF first)."
+        )
+        vm_pu = vm_pu.fillna(1.0)
+
+    geo_idx = net.bus_geodata.index
+    connected_idx = net.bus.index[~bus_disconnected].intersection(geo_idx)
+    disconnected_idx = net.bus.index[bus_disconnected].intersection(geo_idx)
+
+    # --- Lines: loading (%) and disconnection status ------------------------
+    line_geoms = [LineString(coords) for coords in net.line_geodata["coords"]]
+    lines_all = gpd.GeoDataFrame(
+        net.line_geodata.copy(), geometry=line_geoms, crs="EPSG:4326"
+    )
+    lines_all["in_service"] = net.line["in_service"].reindex(lines_all.index).values
+
+    if not net.res_line.empty and "loading_percent" in net.res_line.columns:
+        lines_all["loading_percent"] = (
+            net.res_line["loading_percent"].reindex(lines_all.index).values
+        )
+    else:
+        lines_all["loading_percent"] = float("nan")
+
+    lines_active = lines_all[lines_all["in_service"]].copy()
+    lines_disconnected = lines_all[~lines_all["in_service"]]
+
+    # --- Plot ---------------------------------------------------------------
+    # Figure aspect chosen to match Slovenia's wide/short footprint so the map
+    # fills the axes instead of leaving large empty bands top and bottom.
+    fig, ax = plt.subplots(figsize=(12, 7))
+
+    # Country boundary (also fixes the map extent for the collections below)
+    country.boundary.plot(ax=ax, color="black", linewidth=1)
+
+    # Active lines coloured by loading (blue -> red). Built as a matplotlib
+    # LineCollection (added with autolim=False) rather than geopandas' column
+    # plotting, which triggers a transform-recursion crash on matplotlib 3.8.
+    line_cl = None
+    if not lines_active.empty:
+        loading_vals = lines_active["loading_percent"].fillna(0.0).to_numpy()
+        segments = [list(geom.coords) for geom in lines_active.geometry]
+        line_cl = LineCollection(
+            segments,
+            cmap=cmap,
+            norm=Normalize(vmin=load_min, vmax=load_max),
+            linewidths=1.4,
+            zorder=1,
+        )
+        line_cl.set_array(loading_vals)
+        ax.add_collection(line_cl, autolim=False)
+
+    # Disconnected lines in black
+    if not lines_disconnected.empty:
+        dseg = [list(geom.coords) for geom in lines_disconnected.geometry]
+        ax.add_collection(
+            LineCollection(
+                dseg,
+                colors="black",
+                linewidths=1.6,
+                zorder=2,
+                label="Disconnected line",
+            ),
+            autolim=False,
+        )
+
+    # Disconnected buses in black
+    if len(disconnected_idx) > 0:
+        ax.scatter(
+            net.bus_geodata.loc[disconnected_idx, "x"],
+            net.bus_geodata.loc[disconnected_idx, "y"],
+            color="black",
+            s=45,
+            zorder=3,
+            label="Disconnected bus",
+        )
+
+    # Connected buses coloured by voltage (blue -> red)
+    sc = None
+    if len(connected_idx) > 0:
+        sc = ax.scatter(
+            net.bus_geodata.loc[connected_idx, "x"],
+            net.bus_geodata.loc[connected_idx, "y"],
+            c=vm_pu.loc[connected_idx],
+            cmap=cmap,
+            vmin=v_min,
+            vmax=v_max,
+            s=45,
+            edgecolor="black",
+            linewidth=0.2,
+            zorder=4,
+        )
+
+    ax.set_title(title, fontsize=14)
+    ax.set_xlabel("Longitude")
+    ax.set_ylabel("Latitude")
+    ax.grid(True)
+    ax.margins(0.02)  # trim padding between the network and the axes frame
+    # Let the map fill the axes box (no aspect-driven side gap). The figure size
+    # is chosen to match Slovenia's ~1.5:1 footprint, so proportions stay close
+    # to geographic without leaving whitespace around the network.
+    ax.set_aspect("auto")
+
+    handles, _ = ax.get_legend_handles_labels()
+    if handles:
+        ax.legend(loc="upper right")
+
+    # Two colour bars (bus voltage + line loading), mirroring pf_res_plotly.
+    # An axes divider makes each bar exactly as tall as the map without
+    # extending the figure; the gap before the second bar leaves room for the
+    # first bar's tick labels so the two bars and labels never overlap.
+    divider = make_axes_locatable(ax)
+    if sc is not None:
+        cax_v = divider.append_axes("right", size="3.5%", pad=0.12)
+        cbar_v = fig.colorbar(sc, cax=cax_v)
+        cbar_v.set_label("Bus Voltage [p.u.]")
+    if line_cl is not None:
+        cax_l = divider.append_axes("right", size="3.5%", pad=0.8)
+        cbar_l = fig.colorbar(line_cl, cax=cax_l)
+        cbar_l.set_label("Line Loading [%]")
+
+    plt.show()

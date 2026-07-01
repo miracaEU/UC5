@@ -14,6 +14,7 @@ from UC5_disruption_flooding_events import (
     plot_affected_regions,
     plot_historical_affected_regions,
     plot_disabled_elements,
+    plot_power_flow_static,
 )
 
 if __name__ == "__main__":
@@ -304,8 +305,10 @@ def run_predefined_simulation(
         time_series_short = load_profiles[0:36]
 
         pf_results_before = time_series_calculations(time_series_short, net, "DC OPF")
-        print("Baseline power flow in the network before interruption")
-        pf_res_plotly(net)
+        #pf_res_plotly(net)
+        # Static counterpart of the interactive plot above — renders on GitHub
+        # and in the Jupyter Book (see plot_power_flow_static docstring).
+        plot_power_flow_static(net, title="Baseline power flow before interruption")
 
         # UC5 simulation through the sava river time-dependant flow
         create_disruption(
@@ -330,8 +333,10 @@ def run_predefined_simulation(
         ]  # First 36 hours of the month and the rest days period
 
         pf_results_after = time_series_calculations(time_series_short, net, "DC OPF")
-        print("power flow in the network during disruption")
-        pf_res_plotly(net)
+        #pf_res_plotly(net)
+        # Static counterpart of the interactive plot above — renders on GitHub
+        # and in the Jupyter Book (see plot_power_flow_static docstring).
+        plot_power_flow_static(net, title="Rerouted power flow during the disruption")
 
         # Export resuts
         combine_res_and_export(
@@ -347,8 +352,10 @@ def run_predefined_simulation(
         time_series_short = load_profiles[0:24]
 
         pf_results_before = time_series_calculations(time_series_short, net, "DC OPF")
-        print("Baseline power flow in the network before interruption")
-        pf_res_plotly(net)
+        #pf_res_plotly(net)
+        # Static counterpart of the interactive plot above — renders on GitHub
+        # and in the Jupyter Book (see plot_power_flow_static docstring).
+        plot_power_flow_static(net, title="Baseline power flow before interruption")
 
         # UC5 simulation through the sava river time-dependant flow
         create_disruption(
@@ -370,8 +377,10 @@ def run_predefined_simulation(
         time_series_short = load_profiles[24:]
 
         pf_results_after = time_series_calculations(time_series_short, net, "DC OPF")
-        print("power flow in the network during disruption")
-        pf_res_plotly(net)
+        #pf_res_plotly(net)
+        # Static counterpart of the interactive plot above — renders on GitHub
+        # and in the Jupyter Book (see plot_power_flow_static docstring).
+        plot_power_flow_static(net, title="Rerouted power flow during the disruption")
 
         # Export results
         combine_res_and_export(
@@ -388,8 +397,10 @@ def run_predefined_simulation(
         time_series_short = load_profiles[0:48]
 
         pf_results_before = time_series_calculations(time_series_short, net, "DC OPF")
-        print("Baseline power flow in the network before interruption")
-        pf_res_plotly(net)
+        #pf_res_plotly(net)
+        # Static counterpart of the interactive plot above — renders on GitHub
+        # and in the Jupyter Book (see plot_power_flow_static docstring).
+        plot_power_flow_static(net, title="Baseline power flow before interruption")
 
         # Optional manual node disruptions (by bus name) — applied in addition to the flooding disruption
         apply_node_outage_by_name(net, disrupted_node_names)
@@ -416,8 +427,10 @@ def run_predefined_simulation(
         time_series_short = load_profiles[48:]
 
         pf_results_after = time_series_calculations(time_series_short, net, "DC OPF")
-        print("power flow in the network during disruption")
-        pf_res_plotly(net)
+        #pf_res_plotly(net)
+        # Static counterpart of the interactive plot above — renders on GitHub
+        # and in the Jupyter Book (see plot_power_flow_static docstring).
+        plot_power_flow_static(net, title="Rerouted power flow during the disruption")
 
         # Export results
         combine_res_and_export(
@@ -432,8 +445,10 @@ def run_predefined_simulation(
         time_series_short = load_profiles[0:12]
 
         pf_results_before = time_series_calculations(time_series_short, net, "DC OPF")
-        print("Baseline power flow in the network before interruption")
-        pf_res_plotly(net)
+        #pf_res_plotly(net)
+        # Static counterpart of the interactive plot above — renders on GitHub
+        # and in the Jupyter Book (see plot_power_flow_static docstring).
+        plot_power_flow_static(net, title="Baseline power flow before interruption")
 
         # 1. Upper region
         create_disruption(
@@ -454,8 +469,10 @@ def run_predefined_simulation(
         time_series_short = load_profiles[12:24]
 
         pf_results_1 = time_series_calculations(time_series_short, net, "DC OPF")
-        print("power flow in the network during disruption")
-        pf_res_plotly(net)
+        #pf_res_plotly(net)
+        # Static counterpart of the interactive plot above — renders on GitHub
+        # and in the Jupyter Book (see plot_power_flow_static docstring).
+        plot_power_flow_static(net, title="Rerouted power flow during the disruption")
 
         # 2. Middle region
         create_disruption(
@@ -470,7 +487,10 @@ def run_predefined_simulation(
         time_series_short = load_profiles[24:48]
 
         pf_results_2 = time_series_calculations(time_series_short, net, "DC OPF")
-        pf_res_plotly(net)
+        #pf_res_plotly(net)
+        # Static counterpart of the interactive plot above — renders on GitHub
+        # and in the Jupyter Book (see plot_power_flow_static docstring).
+        plot_power_flow_static(net, title="Rerouted power flow during the disruption")
 
         # 3. Lower region
         create_disruption(
@@ -485,7 +505,10 @@ def run_predefined_simulation(
         time_series_short = load_profiles[48:]
 
         pf_results_3 = time_series_calculations(time_series_short, net, "DC OPF")
-        pf_res_plotly(net)
+        #pf_res_plotly(net)
+        # Static counterpart of the interactive plot above — renders on GitHub
+        # and in the Jupyter Book (see plot_power_flow_static docstring).
+        plot_power_flow_static(net, title="Rerouted power flow during the disruption")
 
         pf_results = (
             pd.concat([pf_results_1, pf_results_2, pf_results_3], axis=0)
@@ -653,9 +676,11 @@ def single_point_of_failure(
     #enable all nodes and edges in the network for consitent plotting
     enable_all_elements(net) 
     
-    print("Baseline power flow in the network before interruption")
-    pf_res_plotly(net)
-    
+    #pf_res_plotly(net)
+    # Static counterpart of the interactive plot above — renders on GitHub
+    # and in the Jupyter Book (see plot_power_flow_static docstring).
+    plot_power_flow_static(net, title="Baseline power flow before interruption")
+
     # Optional manual node disruptions (by bus name) — applied in addition to the flooding disruption
     apply_node_outage_by_name(net, disrupted_node_names)
 
@@ -667,8 +692,10 @@ def single_point_of_failure(
     ]  # First 36 hours of the month and the rest days period
 
     pf_results_after = time_series_calculations(time_series_short, net, "DC OPF")
-    print("power flow in the network during disruption")
-    pf_res_plotly(net)
+    #pf_res_plotly(net)
+    # Static counterpart of the interactive plot above — renders on GitHub
+    # and in the Jupyter Book (see plot_power_flow_static docstring).
+    plot_power_flow_static(net, title="Rerouted power flow during the disruption")
 
     # Export resuts
     combine_res_and_export(
