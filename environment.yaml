@@ -1,4 +1,4 @@
-name: miraca
+name: miraca_UC5
 channels:
   - conda-forge
 dependencies:
